@@ -9,7 +9,7 @@ export function Sidebar() {
     trip, addWaypoint, removeWaypoint, updateWaypoint, 
     setLegs, setLegMode, cameraSmoothness, setCameraSmoothness, 
     cameraZoomOffset, setCameraZoomOffset, easingCurve, setEasingCurve,
-    maxCameraSpeedKmS, setMaxCameraSpeedKmS
+    maxCameraSpeedKmS, setMaxCameraSpeedKmS, exportProgress
   } = useTripStore();
   const [newWaypointName, setNewWaypointName] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
@@ -62,13 +62,32 @@ export function Sidebar() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const { mapInstance, trip } = useTripStore.getState();
+    if (!mapInstance) {
+      alert('Map is not ready yet.');
+      return;
+    }
+    
     setIsExporting(true);
-    // Simulate export process
-    setTimeout(() => {
-      alert('Export feature is scaffolded and uses FFmpeg.wasm in the background. Check src/utils/exportVideo.ts');
+    try {
+      // We will capture at 30 fps for a cinematic feel
+      const durationS = trip.template.durationS || 15;
+      const { exportVideo } = await import('../utils/exportVideo');
+      const url = await exportVideo(mapInstance, durationS, 30);
+      
+      // Trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${trip.name.replace(/\s+/g, '_')}.mp4`;
+      a.click();
+    } catch (e) {
+      console.error(e);
+      alert('Export failed. Check console for details. (Ensure you have a fast internet connection for ffmpeg.wasm)');
+    } finally {
       setIsExporting(false);
-    }, 2000);
+      useTripStore.getState().setExportProgress(null);
+    }
   };
 
   return (
@@ -267,10 +286,16 @@ export function Sidebar() {
           <button 
             onClick={handleExport}
             disabled={isExporting}
-            className="w-full bg-blue-600 hover:bg-blue-500 py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full bg-blue-600 hover:bg-blue-500 py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
           >
             {isExporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            {isExporting ? 'Exporting...' : 'Export MP4'}
+            {isExporting 
+              ? (exportProgress !== null 
+                  ? (exportProgress === 1 
+                      ? 'Encoding MP4...' 
+                      : `Capturing... ${Math.round(exportProgress * 100)}%`) 
+                  : 'Exporting...') 
+              : 'Export MP4'}
           </button>
         </div>
       </div>

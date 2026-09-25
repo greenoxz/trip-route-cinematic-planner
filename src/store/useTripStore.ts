@@ -14,6 +14,10 @@ interface TripState {
   setTemplate: (template: TemplatePreset) => void;
   setCurrentTime: (time: number) => void;
   setIsPlaying: (isPlaying: boolean) => void;
+  mapInstance: any;
+  setMapInstance: (map: any) => void;
+  exportProgress: number | null;
+  setExportProgress: (progress: number | null) => void;
   cameraSmoothness: number;
   setCameraSmoothness: (smoothness: number) => void;
   cameraZoomOffset: number;
@@ -90,5 +94,9 @@ export const useTripStore = create<TripState>((set, get) => ({
   easingCurve: 'ease-in-out-quad',
   setEasingCurve: (easingCurve) => set({ easingCurve }),
   maxCameraSpeedKmS: 0, // 0 = unlimited
-  setMaxCameraSpeedKmS: (maxCameraSpeedKmS) => set({ maxCameraSpeedKmS })
+  setMaxCameraSpeedKmS: (maxCameraSpeedKmS) => set({ maxCameraSpeedKmS }),
+  mapInstance: null,
+  setMapInstance: (mapInstance) => set({ mapInstance }),
+  exportProgress: null,
+  setExportProgress: (exportProgress) => set({ exportProgress })
 }));

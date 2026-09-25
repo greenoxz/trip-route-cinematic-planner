@@ -9,7 +9,7 @@ export function MapView() {
   const mapRef = useRef<MapLibreMap | null>(null);
   const mapLoadedRef = useRef(false);
   const [mapLoaded, setMapLoaded] = React.useState(false);
-  const { trip, updateWaypoint, currentTime, isPlaying, cameraSmoothness, cameraZoomOffset, easingCurve } = useTripStore();
+  const { trip, updateWaypoint, currentTime, isPlaying, cameraSmoothness, cameraZoomOffset, easingCurve, setMapInstance, exportProgress } = useTripStore();
   const markersRef = useRef<Record<string, Marker>>({});
   const navigatorMarkerRef = useRef<Marker | null>(null);
 
@@ -22,6 +22,7 @@ export function MapView() {
       center: [100.5, 13.7], 
       zoom: 5,
       pitch: 45,
+      preserveDrawingBuffer: true,
     });
 
     mapRef.current = map;
@@ -78,6 +79,7 @@ export function MapView() {
 
       mapLoadedRef.current = true;
       setMapLoaded(true);
+      setMapInstance(map);
     });
 
     return () => {
@@ -260,7 +262,7 @@ export function MapView() {
               navMarker.setRotation(bearing);
             }
 
-            if (isPlaying) {
+            if (isPlaying || exportProgress !== null) {
                // Smooth interpolation (damping) to prevent dizziness
                const currentBearing = map.getBearing();
                const currentZoom = map.getZoom();
@@ -268,10 +270,12 @@ export function MapView() {
                
                // Shortest angular distance
                let diff = ((bearing - currentBearing + 540) % 360) - 180;
-               const smoothBearing = currentBearing + diff * cameraSmoothness;
+               // If exporting, jump immediately, else apply damping
+               const factor = (exportProgress !== null) ? 1.0 : cameraSmoothness;
+               const smoothBearing = currentBearing + diff * factor;
                
-               const smoothZoom = currentZoom + (targetZoom - currentZoom) * cameraSmoothness;
-               const smoothPitch = currentPitch + (targetPitch - currentPitch) * cameraSmoothness;
+               const smoothZoom = currentZoom + (targetZoom - currentZoom) * factor;
+               const smoothPitch = currentPitch + (targetPitch - currentPitch) * factor;
 
                map.jumpTo({
                  center: point.geometry.coordinates as [number, number],
@@ -294,7 +298,7 @@ export function MapView() {
           // ignore
         }
       }
-  }, [currentTime, trip.legs, isPlaying, cameraSmoothness, cameraZoomOffset, easingCurve]);
+  }, [currentTime, trip.legs, isPlaying, cameraSmoothness, cameraZoomOffset, easingCurve, exportProgress]);
 
   return (
     <div className="absolute inset-0 w-full h-full" ref={mapContainer} />
